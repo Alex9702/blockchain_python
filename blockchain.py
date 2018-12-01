@@ -1,4 +1,4 @@
-from collections import OrderedDict
+# from collections import OrderedDict
 from hash_util import hash_string_256, hash_block
 import json
 
@@ -27,25 +27,14 @@ class Blockchain:
         try:
             with open('blockchain.txt', mode='r') as f:
                 file_content = f.readlines()
-                temp_chain = json.loads(file_content[0][:-1])
-                temp_open_transactions = json.loads(file_content[1])
+                self.chain = json.loads(file_content[0][:-1])
+                self.open_transactions = json.loads(file_content[1])
         except IOError:
             self.create_chain() # genesis block
             self.open_transactions = []
         finally:
-            ordered_dicts = [[OrderedDict(
-                    [('sender', tx['sender']), ('recipient', tx['recipient']), ('amount', tx['amount'])]
-                )
-                for tx in block['transactions']]
-                for block in temp_chain]
-            for (index, l) in enumerate(ordered_dicts):
-                temp_chain
-
-            # for block in temp_chain:
-            #     for tx in block['transactions']:
-            #         print(OrderedDict(
-            #                 [('sender', tx['sender']), ('recipient', tx['recipient']), ('amount', tx['amount'])]
-            #             ))
+            print('Cleanup!')
+            self.verify_chain()
 
     def save_data(self):
         if self.verify_chain():
@@ -58,9 +47,11 @@ class Blockchain:
                 print('Saving failed!')
 
     def add_transaction(self, recipient, sender=owner, amount=1.0):
-        transaction = OrderedDict(
-            [('sender', sender),('recipient', recipient),('amount', amount)]
-        )
+        transaction = {
+            'sender': sender,
+            'recipient': recipient,
+            'amount': amount
+        }
         if self.verify_transaction(transaction):
             self.open_transactions.append(transaction)
             self.participants.add(sender)
@@ -86,10 +77,11 @@ class Blockchain:
         last_block = self.chain[-1]
         hashed_block = hash_block(last_block)
         proof = self.proof_of_work()
-
-        reward_transaction = OrderedDict(
-            [('sender', 'MINING'), ('recipient', owner), ('amount', MINING_REWARD)]
-        )      
+        reward_transaction = {
+            'sender': 'MINING', 
+            'recipient': owner, 
+            'amount': MINING_REWARD
+        }
         self.open_transactions.append(reward_transaction)
         self.create_chain(hashed_block, proof)
         self.open_transactions = []
