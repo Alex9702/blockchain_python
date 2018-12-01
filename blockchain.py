@@ -33,11 +33,14 @@ class Blockchain:
             self.create_chain() # genesis block
             self.open_transactions = []
         finally:
-            print([[OrderedDict(
+            ordered_dicts = [[OrderedDict(
                     [('sender', tx['sender']), ('recipient', tx['recipient']), ('amount', tx['amount'])]
                 )
                 for tx in block['transactions']]
-                for block in temp_chain])
+                for block in temp_chain]
+            for (index, l) in enumerate(ordered_dicts):
+                temp_chain
+
             # for block in temp_chain:
             #     for tx in block['transactions']:
             #         print(OrderedDict(
