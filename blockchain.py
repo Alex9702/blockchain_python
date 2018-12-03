@@ -1,4 +1,4 @@
-# from collections import OrderedDict
+from collections import OrderedDict
 from hash_util import hash_string_256, hash_block
 import json
 
@@ -10,8 +10,8 @@ class Blockchain:
         self.chain = []
         self.open_transactions = []
         self.participants = set()
+        # self.create_chain() # genesis block
         self.load_data()
-        
 
     def create_chain(self, previous_hash='', proof=100):
         block = {
@@ -25,40 +25,53 @@ class Blockchain:
 
     def load_data(self):
         try:
-            with open('blockchain.txt', mode='r') as f:
-                file_content = f.readlines()
-                self.chain = json.loads(file_content[0][:-1])
-                self.open_transactions = json.loads(file_content[1])
+            with open('blockchain.json', mode='r') as f:
+                file_content = json.loads(f.read())
+                blockchain = file_content[0]
+                open_transactions = file_content[1]
+
+            for block in blockchain:
+                block['transactions'] = ([OrderedDict([('sender', tx['sender']), 
+                                    ('recipient', tx['recipient']), 
+                                    ('amount', tx['amount'])]) 
+                                    for tx in block['transactions']])
+                self.chain.append(block)
+
+            self.open_transactions = [OrderedDict([('sender', tx['sender']), 
+                                    ('recipient', tx['recipient']), 
+                                    ('amount', tx['amount'])]) for tx in open_transactions]
+
         except IOError:
             self.create_chain() # genesis block
             self.open_transactions = []
         finally:
             print('Cleanup!')
-            self.verify_chain()
 
     def save_data(self):
+        json_files = [self.chain, self.open_transactions]
         if self.verify_chain():
             try:
-                with open('blockchain.txt', mode='w') as f:
-                    f.write(json.dumps(self.chain))
-                    f.write('\n')
-                    f.write(json.dumps(self.open_transactions))
+                with open('blockchain.json', mode='w') as f:
+                    # f.write(json.dumps(self.chain))
+                    # f.write('\n')
+                    # f.write(json.dumps(self.open_transactions))
+                    f.write(json.dumps(json_files))
             except IOError:
                 print('Saving failed!')
 
     def add_transaction(self, recipient, sender=owner, amount=1.0):
-        transaction = {
-            'sender': sender,
-            'recipient': recipient,
-            'amount': amount
-        }
+        transaction = OrderedDict([
+            ('sender', sender),
+            ('recipient', recipient),
+            ('amount', amount)
+        ])
         if self.verify_transaction(transaction):
             self.open_transactions.append(transaction)
             self.participants.add(sender)
             self.participants.add(recipient)
             self.save_data()
-            return True
-        return False
+            return transaction
+        return []
 
     def valid_proof(self, transactions, last_hash, proof):
         guess = (str(transactions) + str(last_hash) + str(proof)).encode()
@@ -77,11 +90,11 @@ class Blockchain:
         last_block = self.chain[-1]
         hashed_block = hash_block(last_block)
         proof = self.proof_of_work()
-        reward_transaction = {
-            'sender': 'MINING', 
-            'recipient': owner, 
-            'amount': MINING_REWARD
-        }
+        reward_transaction = OrderedDict([
+            ('sender', 'MINING'), 
+            ('recipient', owner), 
+            ('amount', MINING_REWARD)
+        ])
         self.open_transactions.append(reward_transaction)
         self.create_chain(hashed_block, proof)
         self.open_transactions = []
@@ -122,3 +135,4 @@ class Blockchain:
 
     def verify_transactions(self):
         return all([self.verify_transaction(tx) for tx in self.open_transactions])
+
