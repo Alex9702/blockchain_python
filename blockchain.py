@@ -1,55 +1,63 @@
-from collections import OrderedDict
-from hash_util import hash_string_256, hash_block
 import json
-from transactions import Transactions
+from time import time
+from utility.hash_util import hash_block
+from utility.verification import Verification
 
 MINING_REWARD = 10
-owner = 'Max'
 
 class Blockchain:
-    def __init__(self):
+    def __init__(self, hosting_node_id):
+        self.hosting_node_id = hosting_node_id
         self.chain = []
-        self.open_transactions = []
+        self.__open_transactions = []
         self.participants = set()
         # self.create_chain() # genesis block
         self.load_data()
 
+    @property
+    def chain(self):
+        return self.__chain[:]
+
+    @chain.setter
+    def chain(self, val):
+        self.__chain = val
+
     def create_chain(self, previous_hash='', proof=100):
         block = {
-            'index': len(self.chain) + 1,
-            'previous_hash': previous_hash,
-            'proof':proof,
-            'transactions': self.open_transactions if len(self.open_transactions) > 0 else []
+            'index':len(self.__chain),
+            'previous_hash':previous_hash,
+            'timestamp':time(),
+            'transactions':self.__open_transactions,
+            'proof':proof
         }
-        self.chain.append(block)
+        self.__chain.append(block)
         return block
 
     def load_data(self):
         try:
             with open('blockchain.json', mode='r') as f:
                 file_content = json.loads(f.read())
-                blockchain = file_content[0]
-                open_transactions = file_content[1]
+                self.chain = file_content[0]
+                self.__open_transactions = file_content[1]
 
-
-            for block in blockchain:
-                block['transactions'] = ([Transactions(tx['sender'], 
-                                        tx['recipient'], 
-                                        tx['amount']).to_ordered_dict()
-                                        for tx in block['transactions']])
-                self.chain.append(block)
-
-            self.open_transactions = [Transactions(tx['sender'], 
-                                    tx['recipient'], 
-                                    tx['amount']).to_ordered_dict()
-                                    for tx in open_transactions]
             self.get_participants()
         except IOError:
             self.create_chain() # genesis block
-            self.open_transactions = []
+            self.__open_transactions = []
         finally:
             print('Cleanup!')
+            Verification.verify_chain(self.__chain)
 
+
+    def save_data(self):
+        print(type(self.__chain))
+        if Verification.verify_chain(self.__chain):
+            try:
+                with open('blockchain.json', mode='w') as f:
+                    f.write(json.dumps([self.__chain, self.__open_transactions]))
+            except IOError:
+                print('Saving failed!')
+ 
     def get_participants(self):
         for block in self.chain:
             for participant in block['transactions']:
@@ -58,96 +66,66 @@ class Blockchain:
                 if participant['recipient'] != 'MINING':
                     self.participants.add(participant['recipient'])
         
-        for open_transaction in self.open_transactions:
+        for open_transaction in self.__open_transactions:
             self.participants.add(open_transaction['sender'])
             self.participants.add(open_transaction['recipient'])
 
-    def save_data(self):
-        json_files = [self.chain, self.open_transactions]
-        if self.verify_chain():
-            try:
-                with open('blockchain.json', mode='w') as f:
-                    # f.write(json.dumps(self.chain))
-                    # f.write('\n')
-                    # f.write(json.dumps(self.open_transactions))
-                    f.write(json.dumps(json_files))
-            except IOError:
-                print('Saving failed!')
-
-    def add_transaction(self, recipient, sender=owner, amount=1.0):
-        transaction = OrderedDict([
-            ('sender', sender),
-            ('recipient', recipient),
-            ('amount', amount)
-        ])
-        if self.verify_transaction(transaction):
-            self.open_transactions.append(transaction)
+    def add_transaction(self, recipient, sender, amount=1.0):
+        transaction = {
+            'sender': sender,
+            'recipient': recipient,
+            'amount': amount
+        }
+        if Verification.verify_transaction(transaction, self.get_balance):
+            self.__open_transactions.append(transaction)
             self.participants.add(sender)
             self.participants.add(recipient)
             self.save_data()
             return transaction
         return []
 
-    def valid_proof(self, transactions, last_hash, proof):
-        guess = (str(transactions) + str(last_hash) + str(proof)).encode()
-        guess_hash = hash_string_256(guess)
-        return guess_hash[0:2] == '00'
-
     def proof_of_work(self):
-        last_block = self.chain[-1]
+        last_block = self.__chain[-1]
         last_hash = hash_block(last_block)
         proof = 0
-        while not self.valid_proof(self.open_transactions, last_hash, proof):
+        while not Verification.valid_proof(self.__open_transactions, last_hash, proof):
             proof += 1
         return proof
 
     def mine_block(self):
-        last_block = self.chain[-1]
+        last_block = self.__chain[-1]
         hashed_block = hash_block(last_block)
         proof = self.proof_of_work()
-        reward_transaction = OrderedDict([
-            ('sender', 'MINING'), 
-            ('recipient', owner), 
-            ('amount', MINING_REWARD)
-        ])
-        self.open_transactions.append(reward_transaction)
+        reward_transaction = {
+            'sender': 'MINING', 
+            'recipient': self.hosting_node_id, 
+            'amount': MINING_REWARD
+        }
+        self.__open_transactions.append(reward_transaction)
         self.create_chain(hashed_block, proof)
-        self.open_transactions = []
+        self.__open_transactions = []
         self.save_data()
         return True
 
-    def verify_chain(self):
-        for (index, block) in enumerate(self.chain):
-            if index == 0:
-                continue
-            if block['previous_hash'] != hash_block(self.chain[index - 1]):
-                return False
-            if not self.valid_proof(block['transactions'][:-1], block['previous_hash'], block['proof']):
-                print('Proof of work is invalid')
-                return False
-        return True
-
     def printing_blockchain_elements(self):
-        for block in self.chain:
+        for block in self.__chain:
             print('Outputting Block:')
             print(block)
         print('-'*20)
     
-    def get_balance(self, participant):
-        tx_sender = [[tx['amount'] for tx in block['transactions'] if tx['sender'] == participant] for block in self.chain]
-        open_tx_sender = [tx['amount'] for tx in self.open_transactions if tx['sender'] == participant]
+    def get_balance(self):
+        participant = self.hosting_node_id
+        tx_sender = [[tx['amount'] for tx in block['transactions'] if tx['sender'] == participant] for block in self.__chain]
+        open_tx_sender = [tx['amount'] for tx in self.__open_transactions if tx['sender'] == participant]
         tx_sender.append(open_tx_sender)
         amount_sent = sum([sum(tx) for tx in tx_sender if len(tx) > 0])
 
-        tx_recipient = [[tx['amount'] for tx in block['transactions'] if tx['recipient'] == participant] for block in self.chain]
+        tx_recipient = [[tx['amount'] for tx in block['transactions'] if tx['recipient'] == participant] for block in self.__chain]
         amount_received = sum([sum(tx) for tx in tx_recipient if len(tx) > 0])
 
         return  amount_received - amount_sent
 
-    def verify_transaction(self, transaction):
-        sender_balance = self.get_balance(transaction['sender'])
-        return sender_balance >= transaction['amount']
+    def get_open_transactions(self):
+        return self.__open_transactions[:]
 
-    def verify_transactions(self):
-        return all([self.verify_transaction(tx) for tx in self.open_transactions])
 
