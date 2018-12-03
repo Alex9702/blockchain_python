@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from hash_util import hash_string_256, hash_block
 import json
+from transactions import Transactions
 
 MINING_REWARD = 10
 owner = 'Max'
@@ -30,22 +31,36 @@ class Blockchain:
                 blockchain = file_content[0]
                 open_transactions = file_content[1]
 
+
             for block in blockchain:
-                block['transactions'] = ([OrderedDict([('sender', tx['sender']), 
-                                    ('recipient', tx['recipient']), 
-                                    ('amount', tx['amount'])]) 
-                                    for tx in block['transactions']])
+                block['transactions'] = ([Transactions(tx['sender'], 
+                                        tx['recipient'], 
+                                        tx['amount']).to_ordered_dict()
+                                        for tx in block['transactions']])
                 self.chain.append(block)
 
-            self.open_transactions = [OrderedDict([('sender', tx['sender']), 
-                                    ('recipient', tx['recipient']), 
-                                    ('amount', tx['amount'])]) for tx in open_transactions]
-
+            self.open_transactions = [Transactions(tx['sender'], 
+                                    tx['recipient'], 
+                                    tx['amount']).to_ordered_dict()
+                                    for tx in open_transactions]
+            self.get_participants()
         except IOError:
             self.create_chain() # genesis block
             self.open_transactions = []
         finally:
             print('Cleanup!')
+
+    def get_participants(self):
+        for block in self.chain:
+            for participant in block['transactions']:
+                if participant['sender'] != 'MINING':
+                    self.participants.add(participant['sender'])
+                if participant['recipient'] != 'MINING':
+                    self.participants.add(participant['recipient'])
+        
+        for open_transaction in self.open_transactions:
+            self.participants.add(open_transaction['sender'])
+            self.participants.add(open_transaction['recipient'])
 
     def save_data(self):
         json_files = [self.chain, self.open_transactions]
