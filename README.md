@@ -1,1 +1,1 @@
-Curso de python com blockchain.
+Implementação de blockchain usando Python e Flask.
