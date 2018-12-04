@@ -19,7 +19,7 @@ def add_transaction():
 
 @app.route('/mine_block', methods=['GET'])
 def mine_block():
-    block = blockchain.mine_block()
+    block = blockchain.mine_block('Alex')
     response = {'message': 'Congratulations, you just mined a block!',
                 'index': block['index'],
                 'timestamp': block['timestamp'],
