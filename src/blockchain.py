@@ -1,6 +1,6 @@
 import datetime
-from hash_util import hash_block, hash_sha_256
-from verify import Verify
+from src.utility.hash_util import hash_block, hash_sha_256
+from src.utility.verify import Verify
 
 class Blockchain:
     def __init__(self):
@@ -41,6 +41,7 @@ class Blockchain:
             'receiver':receiver,
             'amount':amount
         })
+        return self.chain[-1]['index'] + 1
 
     
     def mine_block(self):
@@ -49,19 +50,12 @@ class Blockchain:
         proof = self.proof_of_work(previous_block['proof'])
         self.create_block(hashed_block, proof)
         self.transactions = []
+        return self.chain[-1]
+    
+    def is_valid_chain(self, chain):
+        verify = Verify()
+        return verify.is_chain_valid(chain)
 
 
     def __repr__(self):
         return str(self.chain)
-
-b = Blockchain()
-b.add_transaction('Alex','John', 10)
-b.mine_block()
-b.add_transaction('Alex', 'Angela', 30)
-b.mine_block()
-b.add_transaction('Alex', 'Jones', 20)
-b.mine_block()
-b.print_blockchain_value(b.chain)
-
-verify = Verify()
-print(verify.is_chain_valid(b.chain))

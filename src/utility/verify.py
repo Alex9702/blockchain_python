@@ -1,4 +1,4 @@
-from hash_util import hash_block, hash_sha_256
+from src.utility.hash_util import hash_block, hash_sha_256
 
 class Verify:
     def is_chain_valid(self, chain):
