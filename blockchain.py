@@ -33,6 +33,7 @@ class Blockchain:
     def verify_proof(self, proof, previous_proof):
         return hashlib.sha256(str(proof**2 - previous_proof**2).encode()).hexdigest()[0:4] == '0000'
         
+        
     def print_blockchain_value(self, blockchain):
         for block in blockchain:
             print('Outputting block')
