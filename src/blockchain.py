@@ -2,6 +2,8 @@ import datetime
 from src.utility.hash_util import hash_block, hash_sha_256
 from src.utility.verify import Verify
 
+MINING_REWARD = 10
+
 class Blockchain:
     def __init__(self):
         self.chain = []
@@ -44,10 +46,17 @@ class Blockchain:
         return self.chain[-1]['index'] + 1
 
     
-    def mine_block(self):
+    def mine_block(self, miner):
         previous_block = self.chain[-1]
         hashed_block = hash_block(previous_block)
         proof = self.proof_of_work(previous_block['proof'])
+
+        reward_transaction ={
+            'sender':'MINING',
+            'receiver':miner,
+            'amount':MINING_REWARD
+        }
+        self.transactions.append(reward_transaction)
         self.create_block(hashed_block, proof)
         self.transactions = []
         return self.chain[-1]
