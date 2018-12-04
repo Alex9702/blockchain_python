@@ -1,6 +1,6 @@
 import datetime
-import hashlib
-import json
+from hash_util import hash_block, hash_sha_256
+from verify import Verify
 
 class Blockchain:
     def __init__(self):
@@ -14,47 +14,54 @@ class Blockchain:
             'timestamp': str(datetime.datetime.now()),
             'proof': proof,
             'previous_hash':previous_hash,
-            'transactions': self.transactions
+            'transactions': self.transactions[:]
         }
         self.chain.append(block)
         return block
     
-    def hash_block(self, block):
-        return hashlib.sha256(json.dumps(block, sort_keys=True).encode()).hexdigest()
-    
+ 
     def proof_of_work(self, previous_proof):
         proof = 1
         while True:
-            hash_operation = hashlib.sha256(str(proof**2 - previous_proof**2).encode()).hexdigest()
+            hash_operation = hash_sha_256(str(proof**2 - previous_proof**2))
             if hash_operation[0:4] == '0000':
                 return proof
             proof += 1
 
-    def verify_proof(self, proof, previous_proof):
-        return hashlib.sha256(str(proof**2 - previous_proof**2).encode()).hexdigest()[0:4] == '0000'
-        
-        
     def print_blockchain_value(self, blockchain):
         for block in blockchain:
-            print('Outputting block')
+            print(20 * '-', ' Outputting block ', 20 * '-')
             print(block)
         else:
             print(20 * '-')
 
-    def is_chain_valid(self, chain):
-        for (index, block) in enumerate(chain):
-            if index == 0:
-                continue
-            if block['previous_hash'] != self.hash_block(chain[index - 1]):
-                return False
-            if not self.verify_proof(block['proof'], chain[index-1]['proof']):
-                return False
-        return True
+    def add_transaction(self, sender, receiver, amount):
+        self.transactions.append({
+            'sender':sender,
+            'receiver':receiver,
+            'amount':amount
+        })
+
+    
+    def mine_block(self):
+        previous_block = self.chain[-1]
+        hashed_block = hash_block(previous_block)
+        proof = self.proof_of_work(previous_block['proof'])
+        self.create_block(hashed_block, proof)
+        self.transactions = []
+
+
     def __repr__(self):
         return str(self.chain)
 
 b = Blockchain()
-b.create_block(b.hash_block(b.chain[-1]), b.proof_of_work(b.chain[-1]['proof']))
-b.create_block(b.hash_block(b.chain[-1]), b.proof_of_work(b.chain[-1]['proof']))
+b.add_transaction('Alex','John', 10)
+b.mine_block()
+b.add_transaction('Alex', 'Angela', 30)
+b.mine_block()
+b.add_transaction('Alex', 'Jones', 20)
+b.mine_block()
 b.print_blockchain_value(b.chain)
-print(b.is_chain_valid(b.chain))
+
+verify = Verify()
+print(verify.is_chain_valid(b.chain))
