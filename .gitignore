@@ -1,7 +1,7 @@
 __pycache__
 venv
 testes.py
-blockchain.json
-blockchain.txt
+*.json
+*.txt
 pycoin_env
 .vscode
