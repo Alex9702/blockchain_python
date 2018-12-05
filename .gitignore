@@ -1,5 +1,6 @@
 __pycache__
 venv
+testes.py
 blockchain.json
 blockchain.txt
 pycoin_env
