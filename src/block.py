@@ -7,6 +7,7 @@ class Block:
         self.proof = proof
         self.previous_hash = previous_hash
         self.transactions = transactions
-
+    
     def __repr__(self):
         return str(self.__dict__)
+ 
