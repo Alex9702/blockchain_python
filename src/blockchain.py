@@ -5,8 +5,8 @@ from datetime import datetime
 MINING_REWARD = 10
 
 class Blockchain:
-    def __init__(self):
-        self.hosting_node = 'Alex'
+    def __init__(self, hosting_node):
+        self.hosting_node = hosting_node
         self.chain = []
         self.transactions = []
         self.create_block() # criando genesis block
@@ -25,14 +25,26 @@ class Blockchain:
     def get_balance(self):
         participant = self.hosting_node
         
-        tx_sender = [tx_amount]
-        # print([j['amount'] for i in b.chain for j in i['transactions'] if j['sender'] == 'Alex'])
+        tx_sender = [tx_amount['amount'] for block in self.chain 
+                    for tx_amount in block['transactions'] 
+                    if tx_amount['sender'] == participant]
 
-        open_tx_sender = [tx_amount['amount'] for tx_amount in self.transactions 
-                            if tx_amount['sender'] == participant]
-        tx_sender.append(open_tx_sender)
-        tx_sender = sum([tx_amount for inner in tx_sender for tx_amount in inner])
-        print(tx_sender)
+        tr_sender = [tx_amount['amount'] for tx_amount in self.transactions 
+                    if tx_amount['sender'] == participant]
+
+        tx_sender = sum(tx_sender + tr_sender)
+
+        tx_receiver = [tx_amount['amount'] for block in self.chain 
+                    for tx_amount in block['transactions'] 
+                    if tx_amount['receiver'] == participant]
+
+        tr_receiver = [tx_amount['amount'] for tx_amount in self.transactions 
+                      if tx_amount['receiver'] == participant]
+
+        tx_receiver = sum(tx_receiver + tr_receiver)
+
+        return tx_sender < tx_receiver
+
  
 
     def proof_of_work(self, previous_proof):
@@ -72,11 +84,12 @@ class Blockchain:
             'receiver': miner,
             'amount': MINING_REWARD
         }
-
         self.transactions.append(reward_transaction)
-        self.create_block(hashed_block, proof)
-        self.transactions = []
-        return self.last_block()
+        if self.get_balance():
+            self.create_block(hashed_block, proof)
+            self.transactions = []
+            return True
+        return False
     
     def is_valid_chain(self):
         verify = Verify()
