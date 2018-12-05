@@ -5,9 +5,9 @@ class Verify:
         for (index, block) in enumerate(chain):
             if index == 0:
                 continue
-            if block.previous_hash != hash_block(chain[index - 1]):
+            if block['previous_hash'] != hash_block(chain[index - 1]):
                 return False
-            if not self.verify_proof(block.proof, chain[index-1].proof):
+            if not self.verify_proof(block['proof'], chain[index-1]['proof']):
                 return False
         return True
     @staticmethod

@@ -21,17 +21,18 @@ def add_transaction():
 def mine_block():
     block = blockchain.mine_block('Alex')
     response = {'message': 'Congratulations, you just mined a block!',
-                'index': block.index,
-                'timestamp': block.timestamp,
-                'proof': block.proof,
-                'previous_hash': block.previous_hash,
-                'transactions': [transaction.__dict__ for transaction in block.transactions]}
+                'index': block['index'],
+                'timestamp': block['timestamp'],
+                'proof': block['proof'],
+                'previous_hash': block['previous_hash'],
+                'transactions': block['transactions']
+                }
     return jsonify(response)
 
 
 @app.route('/get_chain', methods=['GET'])
 def get_chain():
-    response = {'chain': blockchain.get_blockchain(),
+    response = {'chain': blockchain.chain,
                 'length': len(blockchain.chain)}
     return jsonify(response), 200
 

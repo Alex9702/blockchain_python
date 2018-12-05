@@ -1,7 +1,6 @@
 from src.utility.hash_util import hash_block, hash_sha_256
 from src.utility.verify import Verify
-from src.block import Block
-from src.transaction import Transation
+from datetime import datetime
 
 MINING_REWARD = 10
 
@@ -13,18 +12,28 @@ class Blockchain:
         self.create_block() # criando genesis block
     
     def create_block(self, previous_hash='', proof=1):
-        block = Block(len(self.chain) + 1, proof, previous_hash, self.transactions.copy())
+        block = {
+            'index': len(self.chain),
+            'timestamp': str(datetime.now()),
+            'previous_hash': previous_hash,
+            'proof': proof,
+            'transactions': self.transactions[:]
+        }
         self.chain.append(block)
         return block
 
     def get_balance(self):
-        pass
-    
-    def get_blockchain(self):
-        blockchain = [block.__dict__ for block in self.chain]
-        for (index, block) in enumerate(self.chain):
-            blockchain[index]['transactions'] = [transaction.__dict__ for transaction in block.transactions]
-        return blockchain
+        participant = self.hosting_node
+        
+        tx_sender = [tx_amount]
+        # print([j['amount'] for i in b.chain for j in i['transactions'] if j['sender'] == 'Alex'])
+
+        open_tx_sender = [tx_amount['amount'] for tx_amount in self.transactions 
+                            if tx_amount['sender'] == participant]
+        tx_sender.append(open_tx_sender)
+        tx_sender = sum([tx_amount for inner in tx_sender for tx_amount in inner])
+        print(tx_sender)
+ 
 
     def proof_of_work(self, previous_proof):
         proof = 1
@@ -45,15 +54,25 @@ class Blockchain:
         return self.chain[-1]
 
     def add_transaction(self, sender, receiver, amount):
-        transaction = Transation(sender, receiver, amount)
+        transaction = {
+            'sender': sender,
+            'receiver': receiver,
+            'amount': amount
+        }
         self.transactions.append(transaction)
-        return self.last_block().index + 1
+        return self.last_block()['index'] + 1
     
     def mine_block(self, miner):
         previous_block = self.last_block()
         hashed_block = hash_block(previous_block)
-        proof = self.proof_of_work(previous_block.proof)
-        reward_transaction = Transation('MINING', miner, MINING_REWARD)
+        proof = self.proof_of_work(previous_block['proof'])
+
+        reward_transaction = {
+            'sender': 'MINING',
+            'receiver': miner,
+            'amount': MINING_REWARD
+        }
+
         self.transactions.append(reward_transaction)
         self.create_block(hashed_block, proof)
         self.transactions = []
