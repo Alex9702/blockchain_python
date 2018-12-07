@@ -1,57 +1,67 @@
+import binascii
+import Crypto.Random
 from Crypto.PublicKey import RSA
 from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA256
-import Crypto.Random
-import binascii
+import json
 
 class Wallet:
     def __init__(self):
-        self.pk = None
-        self.pr = None
+        self.keys = {}
+        # self.pk = None
+        # self.pr = None
 
     def create_keys(self):
-        pr = RSA.generate(1024,Crypto.Random.new().read)
+        pr = (RSA.generate(1024,Crypto.Random.new().read))
         pk = pr.publickey()
-        self.pr = pr.exportKey()
-        self.pk = pk.exportKey()
+        self.keys['private'] = pr.exportKey().decode('utf8')
+        self.keys['public'] = pk.exportKey().decode('utf8')
+        # self.keys['private'] = pr.exportKey().decode('utf8') # [31:-29].replace('\n', '')
+        # self.keys['public'] = pk.exportKey().decode('utf8') # [27:-25].replace('\n', '')
     
-    def save_keys(self):
-        with open('private.pem', mode='wb') as f:
-            f.write(self.pr)
-        with open('public.pem', mode='wb') as f:
-            f.write(self.pk)
-        
-    def read_keys(self):
-        with open('private.pem', mode='rb') as f:
-            self.pr = f.read()
-        with open('public.pem', mode='rb') as f:
-            self.pk = f.read()
-    
+    def save_keys(self, owner):
+          with open(f'{owner}_wallet.json', 'w') as f:
+            f.write(json.dumps(self.keys))
+
+
+    def read_keys(self, owner):
+        with open(f'{owner}_wallet.json', 'r') as f:
+            self.keys = json.loads(f.read())
+
+
     def sign_transaction(self, sender, receiver, amount):
-        key = RSA.importKey(self.pr)
+        pr = RSA.importKey(self.keys['private'])
         h = SHA256.new((str(sender) + str(receiver) + str(amount)).encode())
-        signer = PKCS1_v1_5.new(key)
+        signer = PKCS1_v1_5.new(pr)
         signature = signer.sign(h)
-        return signature
+        return binascii.hexlify(signature).decode('ascii')
 
     @staticmethod
-    def veriify_transaction(transaction):
-        pk = RSA.importKey(transaction['sender'])
+    def verify_transaction(transaction):
+        pk = RSA.importKey(bytes(transaction['sender'].encode()))
         h = SHA256.new((str(transaction['sender']) + str(transaction['receiver']) + str(transaction['amount'])).encode())
         verifier = PKCS1_v1_5.new(pk)
-        return verifier.verify(h, transaction['signature'])
+        return verifier.verify(h, binascii.unhexlify(transaction['signature']))
+
+#### TESTES
+
+owner = 'Max'
 
 w = Wallet()
-w.read_keys()
-
-transaction = {
-    'sender':'Alex',
+# w.create_keys()
+# w.save_keys(owner)
+w.read_keys(owner)
+# print(w.keys)
+t = {
+    'sender': w.keys['public'],
     'receiver': 'Max',
     'amount': 50,
     'signature': None
 }
+t['signature'] = w.sign_transaction(t['sender'], 'Max', 50)
+print(t)
+# print(t)
+# print(w.sign_transaction(t['sender'], 'Max', 50))
+print(w.verify_transaction(t))
 
-transaction['sender'] = w.pk
-transaction['signature'] = w.sign_transaction(transaction['sender'], transaction['receiver'], transaction['amount'])
 
-print(Wallet.veriify_transaction(transaction))
