@@ -2,6 +2,7 @@ from datetime import datetime
 from src.utility.hash_util import hash_block, hash_sha_256
 from src.utility.verify import Verify
 from src.db_json import save_data, read_data
+from src.wallet import Wallet
 
 MINING_REWARD = 10
 
@@ -11,6 +12,7 @@ class Blockchain:
         self.chain = []
         self.transactions = []
         self.load_data()
+        self.wallet = None
     
     def create_block(self, previous_hash='', proof=1):
         block = {
@@ -85,10 +87,12 @@ class Blockchain:
         return self.chain[-1]
 
     def add_transaction(self, sender, receiver, amount):
+        
         transaction = {
             'sender': sender,
             'receiver': receiver,
             'amount': amount
+            'signature':''
         }
         self.transactions.append(transaction)
         self.save_data()
@@ -98,11 +102,11 @@ class Blockchain:
         previous_block = self.last_block()
         hashed_block = hash_block(previous_block)
         proof = self.proof_of_work(previous_block['proof'])
-
         reward_transaction = {
             'sender': 'MINING',
             'receiver': miner,
-            'amount': MINING_REWARD
+            'amount': MINING_REWARD,
+            'signature': ''
         }
         self.transactions.append(reward_transaction)
         if self.get_balance():

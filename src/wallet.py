@@ -19,12 +19,12 @@ class Wallet:
         # self.keys['private'] = pr.exportKey().decode('utf8') # [31:-29].replace('\n', '')
         # self.keys['public'] = pk.exportKey().decode('utf8') # [27:-25].replace('\n', '')
     
-    def save_keys(self, owner):
+    def create_wallet(self, owner):
           with open(f'{owner}_wallet.json', 'w') as f:
             f.write(json.dumps(self.keys))
 
 
-    def read_keys(self, owner):
+    def read_wallet(self, owner):
         with open(f'{owner}_wallet.json', 'r') as f:
             self.keys = json.loads(f.read())
 
@@ -47,21 +47,21 @@ class Wallet:
 
 owner = 'Max'
 
-w = Wallet()
+# w = Wallet()
 # w.create_keys()
 # w.save_keys(owner)
-w.read_keys(owner)
+# w.read_keys(owner)
 # print(w.keys)
-t = {
-    'sender': w.keys['public'],
-    'receiver': 'Max',
-    'amount': 50,
-    'signature': None
-}
-t['signature'] = w.sign_transaction(t['sender'], 'Max', 50)
-print(t)
+# t = {
+#     'sender': w.keys['public'],
+#     'receiver': 'Max',
+#     'amount': 50,
+#     'signature': None
+# }
+# t['signature'] = w.sign_transaction(t['sender'], 'Max', 50)
+# print(t)
 # print(t)
 # print(w.sign_transaction(t['sender'], 'Max', 50))
-print(w.verify_transaction(t))
+# print(w.verify_transaction(t))
 
 
