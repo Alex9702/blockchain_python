@@ -10,57 +10,48 @@ class Wallet:
         self.pr = None
 
     def create_keys(self):
-        self.pr, self.pk = self.generate_keys()
-
-    def generate_keys(self):
-        pr = RSA.generate(1024, Crypto.Random.new().read)
+        pr = RSA.generate(1024,Crypto.Random.new().read)
         pk = pr.publickey()
-        return (binascii.hexlify(pr.export_key(format='DER')).decode('ascii'), binascii.hexlify(pk.export_key(format='DER')).decode('ascii'))
-
-    def save_keys(self):
-        if self.pr != None and self.pk != None:
-            try:
-                with open('private.pem', mode='w') as f:
-                    f.write(self.pr)
-                with open('public.pem', mode='w') as f:
-                    f.write(self.pk)
-            except (IOError, IndexError):
-                print('Saving keys failed!')
-
+        self.pr = pr.exportKey()
+        self.pk = pk.exportKey()
     
-    def load_keys(self):
-        try:
-            with open('private.pem', mode='r') as f:
-                self.pr = f.readline()
-            with open('public.pem', mode='r') as f:
-                self.pk = f.readline()
-        except (IOError, IndexError):
-            print('Saving keys failed!')
+    def save_keys(self):
+        with open('private.pem', mode='wb') as f:
+            f.write(self.pr)
+        with open('public.pem', mode='wb') as f:
+            f.write(self.pk)
+        
+    def read_keys(self):
+        with open('private.pem', mode='rb') as f:
+            self.pr = f.read()
+        with open('public.pem', mode='rb') as f:
+            self.pk = f.read()
     
     def sign_transaction(self, sender, receiver, amount):
-        signer = PKCS1_v1_5.new(RSA.import_key(binascii.unhexlify(self.pr)))
-        h = SHA256.new((str(sender) + str(receiver) + str(amount)).encode('utf8'))
+        key = RSA.importKey(self.pr)
+        h = SHA256.new((str(sender) + str(receiver) + str(amount)).encode())
+        signer = PKCS1_v1_5.new(key)
         signature = signer.sign(h)
-        return binascii.hexlify(signature).decode('ascii')
+        return signature
 
     @staticmethod
-    def verify_transaction(transaction):
-        pk = RSA.binascii.unhexlify(transaction['sender'])
+    def veriify_transaction(transaction):
+        pk = RSA.importKey(transaction['sender'])
+        h = SHA256.new((str(transaction['sender']) + str(transaction['receiver']) + str(transaction['amount'])).encode())
         verifier = PKCS1_v1_5.new(pk)
-        h = SHA256.new((str(transaction['sender']) + str(transaction['receiver']) + str(transaction['amount'])).encode('utf8'))
-        return verifier.verify(h, binascii.unhexlify(transaction['signature']))
-        # verifier = PKCS1_v1_5.new(pk)
-        # return verifier.verify(h, binascii.unhexlify(transaction['signature']))
+        return verifier.verify(h, transaction['signature'])
 
 w = Wallet()
-w.load_keys()
+w.read_keys()
 
-# ('Alex', 'Max', 30)
 transaction = {
-    'sender':w.sign_transaction('Alex', 'Max', 50),
-    'receiver':'Max',
+    'sender':'Alex',
+    'receiver': 'Max',
     'amount': 50,
-    'signature': ''
+    'signature': None
 }
 
-print(Wallet.verify_transaction(transaction))
+transaction['sender'] = w.pk
+transaction['signature'] = w.sign_transaction(transaction['sender'], transaction['receiver'], transaction['amount'])
+
+print(Wallet.veriify_transaction(transaction))
