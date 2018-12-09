@@ -13,20 +13,16 @@ class Blockchain:
         self.hosting_node = hosting_node
         self.chain = []
         self.transactions = []
-        self.save_data()
-        # self.load_data()
-        # self.wallet = None
+        self.load_data()
     
     def create_block(self, previous_hash='', proof=100):
-        block = Block(len(self.chain) + 1, previous_hash, proof, self.transactions[:])
+        block = Block(len(self.chain) + 1, previous_hash, proof, self.transactions[:]).get_dict()
         self.chain.append(block)
-        return block.get_dict()
+        return block
 
     def load_data(self):
         json_data = read_data()
         if json_data:
-            # transactions = [Transactions(t['sender'], t['receiver'], t['amount'], t['signature']) for t in json_data['transactions']]
-            # chain = [Block(b['index'], b['previous_hash'], b['proof'],b['transaction'], b['timestamp']) for b in json_data['blockchain']]
             self.chain = json_data['blockchain']
             self.transactions = json_data['transactions']
         else:
@@ -58,6 +54,8 @@ class Blockchain:
                       if tx_amount['receiver'] == participant]
 
         tx_receiver = sum(tx_receiver + tr_receiver)
+        if self.hosting_node == 'bank':
+            return True
 
         return tx_sender < tx_receiver
 
@@ -82,28 +80,27 @@ class Blockchain:
         return self.chain[-1]
 
     def add_transaction(self, sender, receiver, amount):
-        
-        transaction = Transactions(sender, receiver,amount, None)
-        self.transactions.append(transaction)
-        # self.save_data()
-        return self.last_block().index + 1
+        transaction = Transactions(sender, receiver, amount, None)
+        self.transactions.append(transaction.get_dict())
+        self.save_data()
+        return self.last_block()['index'] + 1
     
     def mine_block(self, miner):
         previous_block = self.last_block()
         hashed_block = hash_block(previous_block)
-        proof = self.proof_of_work(previous_block.proof)
+        proof = self.proof_of_work(previous_block['proof'])
         reward_transaction = Transactions(self.hosting_node, miner, MINING_REWARD, None)
-        self.transactions.append(reward_transaction)
-        # if self.get_balance():
-        self.create_block(hashed_block, proof)
+        self.transactions.append(reward_transaction.get_dict())
+        if self.get_balance():
+            self.create_block(hashed_block, proof)
+            self.transactions = []
+            self.save_data()
+            return True
         self.transactions = []
-            # self.save_data()
-        #     return True
-        # self.transactions = []
-        # self.save_data()
+        self.save_data()
         return False
     
     def is_valid_chain(self):
-        # self.load_data()
+        self.load_data()
         verify = Verify()
         return verify.is_chain_valid(self.chain)
