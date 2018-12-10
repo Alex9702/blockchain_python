@@ -67,12 +67,19 @@ def create_wallet():
         response_cod =  400
     return jsonify(response), response_cod if response_cod else 201
 
+@app.route('/read_wallet')
+@app.route('/read_wallet/')
 @app.route('/read_wallet/<id>')
-def read_wallet(id):
+def read_wallet(id=None):
     w = Wallet()
-    if w.read_wallet(id):
-        return f'{id}\'wallet = {w.public}'
-    return f'Não existe cateira para: {id} \nFavor criar!'
+    if id == None:
+        response = {'mensagem':'Falda nome da wallet!'}
+    elif w.read_wallet(id):
+        response = {'nome':id,
+                    'wallet':w.public}
+    else:
+        response = {'mensagem':f'Não existe cateira para: {id}, Favor criar!'}
+    return jsonify(response), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
