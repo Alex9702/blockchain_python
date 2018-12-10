@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request
 from src.blockchain import Blockchain
-
+from src.wallet import Wallet
 
 app = Flask(__name__)
 
@@ -13,7 +13,6 @@ def add_transaction():
     if not all(key in json for key in transaction_keys):
         return 'Está faltando algum elemento.', 400
     index = blockchain.add_transaction(json['sender'], json['receiver'], json['amount'])
-    blockchain.hosting_node = json['sender']
     response = {'mensagem': f'Esta transação será adicionada ao bloco {index}'}
     return jsonify(response), 201
 
@@ -52,6 +51,28 @@ def is_valid():
     else:
         response = {'mensagem': 'Erro: Blockchain inválido.'}
     return jsonify(response), 200
+
+@app.route('/create_wallet', methods=['POST'])
+def create_wallet():
+    response_cod = None
+    json = request.get_json()
+    if json['wallet_id'] != '':
+        w = Wallet()
+        w.create_wallet(json['wallet_id'])
+        if w.read_wallet(json['wallet_id']):
+            response = {'mensagem':'Carteira já existe!', 'carteira':w.public}
+        response =  {'mensagem':f'wallet({json["wallet_id"]}) -> {w.public}'}
+    else:
+        response =  {'mensagem':'Falta wallet_id!'}
+        response_cod =  400
+    return jsonify(response), response_cod if response_cod else 201
+
+@app.route('/read_wallet/<id>')
+def read_wallet(id):
+    w = Wallet()
+    if w.read_wallet(id):
+        return f'{id}\'wallet = {w.public}'
+    return f'Não existe cateira para: {id} \nFavor criar!'
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
