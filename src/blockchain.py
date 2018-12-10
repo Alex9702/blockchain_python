@@ -36,11 +36,9 @@ class Blockchain:
         save_data(self.chain, self.transactions)
         self.load_data()
 
-    def get_balance(self):
-        participant = self.hosting_node
+    def get_balance(self, participant):
 
         tx_receiver = sum([tx['amount'] for block in self.chain for tx in block['transactions'] if tx['receiver'] == participant])
-
         tx_sender = sum([tx['amount'] for block in self.chain for tx in block['transactions'] if tx['sender'] == participant] +  [tx['amount'] for tx in self.transactions if tx['sender'] == participant])
 
         return tx_receiver - tx_sender
@@ -85,17 +83,16 @@ class Blockchain:
         miner_wallet = Wallet()
         if not miner_wallet.read_wallet(miner):
             return False
-        reward_transaction = Transactions(self.hosting_node, miner_wallet.public, MINING_REWARD, None)
+        reward_transaction = Transactions(miner_wallet.public, self.hosting_node, MINING_REWARD, None)
         reward_transaction.signature = miner_wallet.sign_transaction(reward_transaction.get_dict())
         self.transactions.append(reward_transaction.get_dict())
         
         previous_block = self.last_block()
         hashed_block = hash_block(previous_block)
         proof = self.proof_of_work(previous_block['proof'])
-        print([Wallet.verify_transaction(t) for t in self.transactions])
-        return
+
         if all([Wallet.verify_transaction(t) for t in self.transactions]):
-            if self.get_balance() > 0:
+            if self.get_balance(miner_wallet.public) > 0:
                 self.create_block(hashed_block, proof)
                 self.transactions = []
                 self.save_data()
