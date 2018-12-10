@@ -85,13 +85,15 @@ class Blockchain:
         miner_wallet = Wallet()
         if not miner_wallet.read_wallet(miner):
             return False
-        miner = miner_wallet.public
+        reward_transaction = Transactions(self.hosting_node, miner_wallet.public, MINING_REWARD, None)
+        reward_transaction.signature = miner_wallet.sign_transaction(reward_transaction.get_dict())
+        self.transactions.append(reward_transaction.get_dict())
+        
         previous_block = self.last_block()
         hashed_block = hash_block(previous_block)
         proof = self.proof_of_work(previous_block['proof'])
-        reward_transaction = Transactions(self.hosting_node, miner, MINING_REWARD, None)
-        reward_transaction.signature = miner_wallet.sign_transaction(reward_transaction.get_dict())
-        self.transactions.append(reward_transaction.get_dict())
+        print([Wallet.verify_transaction(t) for t in self.transactions])
+        return
         if all([Wallet.verify_transaction(t) for t in self.transactions]):
             if self.get_balance() > 0:
                 self.create_block(hashed_block, proof)

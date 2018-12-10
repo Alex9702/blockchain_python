@@ -4,7 +4,7 @@ from src.blockchain import Blockchain
 
 app = Flask(__name__)
 
-blockchain = Blockchain('Alex')
+blockchain = Blockchain('bank')
 
 @app.route('/add_transaction', methods=['POST'])
 def add_transaction():
@@ -38,9 +38,11 @@ def mine_block():
 
 @app.route('/get_chain', methods=['GET'])
 def get_chain():
-    response = {'chain': blockchain.get_blockchain(),
+    
+    response = {'chain': blockchain.chain,
                 'length': len(blockchain.chain)}
     return jsonify(response), 200
+
 
 @app.route('/is_valid', methods=['GET'])
 def is_valid():
