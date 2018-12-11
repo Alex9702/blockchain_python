@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, redirect, url_for
 from src.blockchain import Blockchain
 from src.wallet import Wallet
 
@@ -16,11 +16,21 @@ def add_transaction():
     response = {'mensagem': f'Esta transação será adicionada ao bloco {index}'}
     return jsonify(response), 201
 
+@app.route('/delete_transaction')
+def delete_transaction():
+    blockchain.delete_transaction()
+    return jsonify({'mensagem':'Transação deletada!'})
 
-@app.route('/mine_block', methods=['GET'])
-def mine_block():
-    
-    if blockchain.mine_block('Alex'):
+
+
+@app.route('/mine_block/<hosting>', methods=['GET'])
+def mine_block(hosting):
+    w = Wallet()
+    if not w.read_wallet(hosting):
+        return jsonify({'mensagem':'Falta hosting wallet!'})
+    blockchain.wallet = w
+    blockchain.hosting_node = w.public
+    if blockchain.mine_block('bank'):
         block = blockchain.last_block()
         response = {'Mensagem': 'Parabéns, bloco minerado!',
                     'index': block['index'],
@@ -33,7 +43,6 @@ def mine_block():
         response = {'mensagem':f'{blockchain.hosting_node}, você não tem importância suficiente para esta transação!'}
             
     return jsonify(response), 200
-
 
 @app.route('/get_chain', methods=['GET'])
 def get_chain():
@@ -56,7 +65,10 @@ def is_valid():
 def create_wallet():
     response_cod = None
     json = request.get_json()
-    if json['wallet_id'] != '':
+    if json  == None:
+        response_cod = 400
+        response = {'mensagem':'Falta wallet_id!'}
+    elif json['wallet_id'] != '':
         w = Wallet()
         w.create_wallet(json['wallet_id'])
         if w.read_wallet(json['wallet_id']):

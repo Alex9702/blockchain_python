@@ -18,18 +18,21 @@ class Wallet:
         self.public = binascii.hexlify(pk.exportKey(format='DER')).decode('ascii')
     
     def create_wallet(self, owner):
+        if len(owner) < 64:
+            owner = SHA256.new(owner.encode()).hexdigest()
         if not self.read_wallet(owner):
             self.__create_keys()
-            with open('{}\wallets\{}_wallet.json'.format(os.path.abspath(os.path.dirname('wallet.py')), owner), 'w') as f:
+            with open('{}\wallets\{}.json'.format(os.path.abspath(os.path.dirname('wallet.py')), owner), 'w') as f:
                 f.write(json.dumps({
                     'public': self.public,
                     'private': self.private
                 }))
-        
-
+    
     def read_wallet(self, owner):
+        if len(owner) < 64:
+            owner = SHA256.new(owner.encode()).hexdigest()
         try:
-            with open('{}\wallets\{}_wallet.json'.format(os.path.abspath(os.path.dirname('wallet.py')), owner), 'r') as f:
+            with open('{}\wallets\{}.json'.format(os.path.abspath(os.path.dirname('wallet.py')), owner), 'r') as f:
                 file_read = json.loads(f.read())
                 self.public = file_read['public']
                 self.private = file_read['private']
@@ -37,6 +40,13 @@ class Wallet:
             return False
         return True
 
+    def delete_wallet(self, owner):
+        if len(owner) < 64:
+            owner = SHA256.new(owner.encode()).hexdigest()
+        if self.read_wallet(owner):
+            os.remove('{}\wallets\{}.json'.format(os.path.abspath(os.path.dirname('wallet.py')), owner))
+            return True
+        return False
 
     def sign_transaction(self, transaction):
         pr = RSA.importKey(binascii.unhexlify(self.private))
